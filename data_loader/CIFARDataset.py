@@ -10,81 +10,69 @@ import numpy as np
 import sys
 import conf
 
-opt = conf.CIFAR100Opt
 
-
-class CIFAR100Dataset(torch.utils.data.Dataset):
-    def __init__(
-        self,
-        file="../dataset/ichar/minmax_scaling_all.csv",
-        domains=None,
-        activities=None,
-        max_source=100,
-        transform="none",
-    ):
+class CIFARDataset(torch.utils.data.Dataset):
+    def __init__(self, opt, domain):
         st = time.time()
-        self.domains = domains
-
+        self.domain = domain
+        domain_names = opt["src_domains"] + opt["tgt_domains"]
+        self.domain_id = domain_names.index(domain)
         self.img_shape = opt["img_size"]
         self.features = None
         self.class_labels = None
         self.domain_labels = None
         self.file_path = opt["file_path"]
 
-        assert len(domains) > 0
-        if domains[0].startswith("original"):
+        if self.domain.startswith("original"):
             self.sub_path1 = "origin"
             self.sub_path2 = ""
             self.data_filename = "original.npy"
             self.label_filename = "labels.npy"
-        elif domains[0].startswith("test"):
+        elif self.domain.startswith("test"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-1"  # all data are same in 1~5
             self.data_filename = "test.npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-1"):
+        elif self.domain.endswith("-1"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-1"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-2"):
+        elif self.domain.endswith("-2"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-2"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-3"):
+        elif self.domain.endswith("-3"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-3"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-4"):
+        elif self.domain.endswith("-4"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-4"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-5"):
+        elif self.domain.endswith("-5"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-5"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
-        elif domains[0].endswith("-all"):
+        elif self.domain.endswith("-all"):
             self.sub_path1 = "corrupted"
             self.sub_path2 = "severity-all"
-            self.data_filename = domains[0].split("-")[0] + ".npy"
+            self.data_filename = self.domain.split("-")[0] + ".npy"
             self.label_filename = "labels.npy"
 
-        if transform == "src":
+        if opt["transform"] == "src":
             self.transform = transforms.Compose(
                 [
                     transforms.RandomCrop(32, padding=4),
                     transforms.RandomHorizontalFlip(),
                 ]
             )
-
-        elif transform == "val":
-            self.transform = None
         else:
-            raise NotImplementedError
+            self.transform = None
 
         self.preprocessing()
 
@@ -101,7 +89,9 @@ class CIFAR100Dataset(torch.utils.data.Dataset):
         self.features = data
         self.class_labels = np.load(path + self.label_filename)
         # assume that single domain is passed as List
-        self.domain_labels = np.array([0 for i in range(len(self.features))])
+        self.domain_labels = np.array(
+            [self.domain_id for i in range(len(self.features))]
+        )
 
         self.dataset = torch.utils.data.TensorDataset(
             torch.from_numpy(self.features),  # resize for resnet
@@ -111,12 +101,6 @@ class CIFAR100Dataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.dataset)
-
-    def get_num_domains(self):
-        return len(self.domains)
-
-    def get_datasets_per_domain(self):
-        return self.datasets
 
     def __getitem__(self, idx):
         if isinstance(idx, torch.Tensor):

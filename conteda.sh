@@ -1,11 +1,9 @@
 
-SRC_PREFIX="reproduce_src"
-LOG_PREFIX="reproduce_methods"
-
-
+SRC_PREFIX="pretraining"
+LOG_PREFIX="methods"
 
 DATASETS="cifar10" # cifar10 or cifar100
-METHODS="NOTE" #Src BN_Stats ONDA PseudoLabel TENT CoTTA NOTE NOTE_iid
+METHODS="BN_Stats" #Src BN_Stats ONDA PseudoLabel TENT CoTTA NOTE NOTE_iid
 
 echo DATASETS: $DATASETS
 echo METHODS: $METHODS
@@ -13,7 +11,7 @@ echo METHODS: $METHODS
 GPUS=(0) #available gpus
 NUM_GPUS=${#GPUS[@]}
 
-sleep 30s # prevent mistake
+sleep 5s # prevent mistake
 if [ ! -d "raw_logs" ]; then
   mkdir raw_logs
 fi
@@ -50,8 +48,6 @@ test_time_adaptation() {
       if [ "${DATASET}" = "cifar10" ]; then
         MODEL="resnet18"
         CP_base="log/cifar10/Src/tgt_test/"${SRC_PREFIX}
-
-        #              TGTS="test"
         TGTS="gaussian_noise-5
             shot_noise-5
             impulse_noise-5
@@ -71,7 +67,6 @@ test_time_adaptation() {
       elif [ "${DATASET}" = "cifar100" ]; then
         MODEL="resnet18"
         CP_base="log/cifar100/Src/tgt_test/"${SRC_PREFIX}
-        #              TGTS="test"
         TGTS="gaussian_noise-5
             shot_noise-5
             impulse_noise-5
@@ -90,7 +85,7 @@ test_time_adaptation() {
 
       fi
 
-      for SEED in 0 1 2; do #multiple seeds
+      for SEED in 0 1; do #multiple seeds
           if [ "${METHOD}" = "Src" ]; then
             EPOCH=0
             #### Train with BN
@@ -161,24 +156,20 @@ test_time_adaptation() {
               wait_n
             done
           done
+
         elif [ "${METHOD}" = "BN_Stats" ]; then
-
-          #### Train with BN
-          for dist in 0; do
+            #### Train with BN
             CP=${CP_base}_${SEED}/cp/cp_last.pth.tar
-            for TGT in $TGTS; do
+            python main.py --gpu_idx ${GPUS[i % ${NUM_GPUS}]} --dataset $DATASET --method ${METHOD} \
+            --tgt "all" --model $MODEL --epoch 1 --load_checkpoint_path ${CP} --seed $SEED \
+            --remove_cp --online --tgt_train_dist 0 --update_every_x ${update_every_x} --memory_size ${memory_size} \
+            --log_prefix ${LOG_PREFIX}_${SEED}_dist${dist} \
+            ${validation} \
+            2>&1 | tee raw_logs/${DATASET}_${LOG_PREFIX}_${SEED}_job${i}.txt &
 
-              python main.py --gpu_idx ${GPUS[i % ${NUM_GPUS}]} --dataset $DATASET --method ${METHOD} --tgt ${TGT} --model $MODEL --epoch $EPOCH --load_checkpoint_path ${CP} --seed $SEED \
-                --remove_cp --online --tgt_train_dist ${dist} --update_every_x ${update_every_x} --memory_size ${memory_size} \
-                --log_prefix ${LOG_PREFIX}_${SEED}_dist${dist} \
-                ${validation} \
-                2>&1 | tee raw_logs/${DATASET}_${LOG_PREFIX}_${SEED}_job${i}.txt &
+            i=$((i + 1))
+            wait_n
 
-              i=$((i + 1))
-              wait_n
-            done
-
-          done
         elif [ "${METHOD}" = "ONDA" ]; then
 
           EPOCH=1

@@ -1,4 +1,4 @@
-LOG_PREFIX="reproduce_src"
+LOG_PREFIX="pretraining"
 
 DATASETS="cifar10" # cifar10 or cifar100
 METHODS="Src"
@@ -6,17 +6,20 @@ METHODS="Src"
 echo DATASETS: $DATASETS
 echo METHODS: $METHODS
 
-GPUS=(0 1 2 3 4 5 6 7) #available gpus
+GPUS=(0) #available gpus
 NUM_GPUS=${#GPUS[@]}
 
-sleep 1 # prevent mistake
-mkdir raw_logs # save console outputs here
+# sleep 15s # prevent mistake
+if [ ! -d "raw_logs" ]; then
+  mkdir raw_logs
+fi
+# mkdir raw_logs # save console outputs here
 
 #### Useful functions
 wait_n() {
   #limit the max number of jobs as NUM_MAX_JOB and wait
   background=($(jobs -p))
-  local default_num_jobs=8 #num concurrent jobs
+  local default_num_jobs=2 #num concurrent jobs
   local num_max_jobs=${1:-$default_num_jobs}
   if ((${#background[@]} >= num_max_jobs)); then
     wait -n
@@ -45,7 +48,7 @@ train_source_model() {
         TGT="test"
       fi
 
-      for SEED in 0 1 2; do
+      for SEED in 0 1 2 3; do
         if [[ "$METHOD" == *"Src"* ]]; then
           #### Train with BN
           for tgt in $TGT; do
