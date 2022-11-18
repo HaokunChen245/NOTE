@@ -1,6 +1,6 @@
 import conf
-from .dnn import DNN
 from torch.utils.data import DataLoader
+from .conteda_learner import Learner_base
 
 from utils import memory
 
@@ -12,7 +12,7 @@ device = torch.device(
 from utils.iabn import *
 
 
-class NOTE(DNN):
+class NOTE(Learner_base):
     def __init__(self, *args, **kwargs):
         super(NOTE, self).__init__(*args, **kwargs)
 
@@ -99,8 +99,8 @@ class NOTE(DNN):
         if conf.args.use_learned_stats:  # batch-free inference
             self.evaluation_online(
                 current_num_sample,
-                "",
                 [[current_sample[0]], [current_sample[1]], [current_sample[2]]],
+                train_set
             )
 
         if (
@@ -119,7 +119,7 @@ class NOTE(DNN):
                 return SKIPPED
 
         if not conf.args.use_learned_stats:  # batch-based inference
-            self.evaluation_online(current_num_sample, "", self.fifo.get_memory())
+            self.evaluation_online(current_num_sample, self.fifo.get_memory(), train_set)
 
         if conf.args.no_adapt:  # for ablation
             return TRAINED

@@ -21,19 +21,8 @@ def get_path():
 
     # information about used data type
     path += conf.args.dataset + "/"
-
     # information about used model type
     path += conf.args.method + "/"
-
-    # information about domain(condition) of training data
-    if conf.args.src == ["all"]:
-        path += "src_all" + "/"
-    elif conf.args.src is not None and len(conf.args.src) >= 1:
-        path += "src_" + "_".join(conf.args.src) + "/"
-
-    if conf.args.tgt:
-        path += "tgt_" + conf.args.tgt + "/"
-
     path += conf.args.log_prefix + "/"
 
     checkpoint_path = path + "cp/"
@@ -238,18 +227,6 @@ def parse_arguments(argv):
         "--method", type=str, default="", help="specify the method name"
     )
 
-    parser.add_argument(
-        "--src",
-        nargs="*",
-        default=None,
-        help="Specify source domains; not passing an arg load default src domains specified in conf.py",
-    )
-    parser.add_argument(
-        "--tgt",
-        type=str,
-        default=None,
-        help='specific target domain; give "src" if you test under src domain',
-    )
     parser.add_argument("--gpu_idx", type=int, default=0, help="which gpu to use")
 
     ###Optional###
@@ -275,24 +252,6 @@ def parse_arguments(argv):
         type=str,
         default="",
         help="Load checkpoint and train from checkpoint in path?",
-    )
-    parser.add_argument(
-        "--train_max_rows",
-        type=int,
-        default=np.inf,
-        help="How many data do you want to use for train",
-    )
-    parser.add_argument(
-        "--valid_max_rows",
-        type=int,
-        default=np.inf,
-        help="How many data do you want to use for valid",
-    )
-    parser.add_argument(
-        "--test_max_rows",
-        type=int,
-        default=np.inf,
-        help="How many data do you want to use for test",
     )
     parser.add_argument(
         "--log_prefix", type=str, default="", help="Prefix of log file path"
@@ -384,10 +343,6 @@ def parse_arguments(argv):
     parser.add_argument("--iabn_k", type=float, default=3.0, help="k for iabn")
     parser.add_argument(
         "--skip_thres", type=int, default=1, help="skip threshold to discard adjustment"
-    )
-
-    parser.add_argument(
-        "--dummy", action="store_true", default=False, help="do nothing"
     )
 
     return parser.parse_args()

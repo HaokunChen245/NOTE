@@ -1,5 +1,5 @@
 import conf
-from .dnn import DNN
+from .conteda_learner import Learner_base
 from torch.utils.data import DataLoader
 from utils.normalize_layer import *
 from utils.loss_functions import *
@@ -67,7 +67,7 @@ class linear_affinity(AffinityMatrix):
         return torch.matmul(X, X.t())
 
 
-class LAME(DNN):
+class LAME(Learner_base):
     def __init__(self, *args, **kwargs):
         super(LAME, self).__init__(*args, **kwargs)
 
@@ -80,7 +80,7 @@ class LAME(DNN):
         else:
             self.featurizer = torch.nn.Sequential(*list(self.net.children())[:-1])
 
-    def train_online(self, current_num_sample):
+    def train_online(self, train_set, current_num_sample):
         """
         Train the model
         """
@@ -92,11 +92,11 @@ class LAME(DNN):
         if not hasattr(self, 'previous_train_loss'):
             self.previous_train_loss = 0
 
-        if current_num_sample > len(self.target_train_set[0]):
+        if current_num_sample > len(train_set[0]):
             return FINISHED
 
         # Get sample from target
-        xs, cls, dls = self.target_train_set
+        xs, cls, dls = train_set
         current_sample = xs[current_num_sample - 1], cls[current_num_sample - 1], dls[current_num_sample - 1]
 
         # Add sample to memory
@@ -104,7 +104,7 @@ class LAME(DNN):
 
         # Skipping depend on "batch size"
         if current_num_sample % conf.args.update_every_x != 0:  # train only when enough samples are collected
-            if not (current_num_sample == len(self.target_train_set[
+            if not (current_num_sample == len(train_set[
                                                   0]) and conf.args.update_every_x >= current_num_sample):  # update with entire data
 
                 self.log_loss_results('train_online', epoch=current_num_sample, loss_avg=self.previous_train_loss)
@@ -124,7 +124,7 @@ class LAME(DNN):
                                  shuffle=True,
                                  drop_last=False, pin_memory=False)
 
-        self.evaluation_online(current_num_sample, '', self.mem.get_memory())
+        self.evaluation_online(current_num_sample, self.mem.get_memory(), train_set)
 
         self.log_loss_results('train_online', epoch=current_num_sample, loss_avg=0)
 

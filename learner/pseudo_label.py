@@ -1,5 +1,5 @@
 import conf
-from .dnn import DNN
+from .conteda_learner import Learner_base
 from torch.utils.data import DataLoader
 
 from utils.loss_functions import *
@@ -7,7 +7,7 @@ from utils.loss_functions import *
 device = torch.device("cuda:{:d}".format(conf.args.gpu_idx) if torch.cuda.is_available() else "cpu")
 
 
-class PseudoLabel(DNN):
+class PseudoLabel(Learner_base):
     def __init__(self, *args, **kwargs):
         super(PseudoLabel, self).__init__(*args, **kwargs)
 
@@ -29,7 +29,7 @@ class PseudoLabel(DNN):
                 module.weight.requires_grad_(True)
                 module.bias.requires_grad_(True)
 
-    def train_online(self, current_num_sample):
+    def train_online(self, train_set, current_num_sample):
         """
         Train the model
         """
@@ -41,20 +41,20 @@ class PseudoLabel(DNN):
         if not hasattr(self, 'previous_train_loss'):
             self.previous_train_loss = 0
 
-        if current_num_sample > len(self.target_train_set[0]):
+        if current_num_sample > len(train_set[0]):
             return FINISHED
 
         # Add a sample
-        feats, cls, dls = self.target_train_set
+        feats, cls, dls = train_set
         current_sample = feats[current_num_sample - 1], cls[current_num_sample - 1], dls[current_num_sample - 1]
         self.mem.add_instance(current_sample)
 
 
         if conf.args.use_learned_stats: #batch-free inference
-            self.evaluation_online(current_num_sample, '', [[current_sample[0]], [current_sample[1]], [current_sample[2]]])
+            self.evaluation_online(current_num_sample, [[current_sample[0]], [current_sample[1]], [current_sample[2]]], train_set)
 
         if current_num_sample % conf.args.update_every_x != 0:  # train only when enough samples are collected
-            if not (current_num_sample == len(self.target_train_set[
+            if not (current_num_sample == len(train_set[
                                                   0]) and conf.args.update_every_x >= current_num_sample):  # update with entire data
 
                 self.log_loss_results('train_online', epoch=current_num_sample, loss_avg=self.previous_train_loss)
@@ -62,9 +62,7 @@ class PseudoLabel(DNN):
 
 
         # Evaluate with a batch
-        self.evaluation_online(current_num_sample, '', self.mem.get_memory())
-
-
+        self.evaluation_online(current_num_sample, self.mem.get_memory(), train_set)
 
         # setup models
         self.net.train()
@@ -74,8 +72,6 @@ class PseudoLabel(DNN):
 
         feats, cls, dls = self.mem.get_memory()
         feats, cls, dls = torch.stack(feats), cls, torch.stack(dls)
-
-
 
         dataset = torch.utils.data.TensorDataset(feats)
         data_loader = DataLoader(dataset, batch_size=conf.args.opt['batch_size'],
