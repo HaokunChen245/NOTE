@@ -47,8 +47,6 @@ def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False)
             translate=(1/16, 1/16),
             scale=(0.95, 1.05) if soft else (0.9, 1.1),
             shear=None,
-            resample=PIL.Image.BILINEAR,
-            fillcolor=None
         ),
         transforms.GaussianBlur(kernel_size=5, sigma=[0.001, 0.25] if soft else [0.001, 0.5]),
         transforms.CenterCrop(size=n_pixels),
@@ -134,9 +132,6 @@ class CoTTA(Learner_base):
 
         feats, cls, dls = self.mem.get_memory()
         feats, cls, dls = torch.stack(feats), cls, torch.stack(dls)
-
-
-
         dataset = torch.utils.data.TensorDataset(feats)
         data_loader = DataLoader(dataset, batch_size=conf.args.opt['batch_size'],
                                  shuffle=True,

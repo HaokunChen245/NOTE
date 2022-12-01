@@ -1,6 +1,6 @@
 LOG_PREFIX="pretraining"
 
-DATASETS="cifar10" # cifar10 or cifar100
+DATASETS="cifar100" # cifar10 or cifar100
 METHODS="Src"
 
 echo DATASETS: $DATASETS
@@ -9,7 +9,7 @@ echo METHODS: $METHODS
 GPUS=(0) #available gpus
 NUM_GPUS=${#GPUS[@]}
 
-sleep 15s # prevent mistake
+sleep 10s # prevent mistake
 if [ ! -d "raw_logs" ]; then
   mkdir raw_logs
 fi
@@ -36,8 +36,6 @@ train_source_model() {
   for DATASET in $DATASETS; do
     for METHOD in $METHODS; do
 
-      validation="--dummy"
-
       if [ "${DATASET}" = "cifar10" ]; then
         EPOCH=200
         MODEL="resnet18"
@@ -46,18 +44,17 @@ train_source_model() {
         MODEL="resnet18"
       fi
 
-      for SEED in 0 1 2; do
+      for SEED in 0; do
         if [[ "$METHOD" == *"Src"* ]]; then
-          #### Train with BN
-          # python main.py --gpu_idx ${GPUS[i % ${NUM_GPUS}]} --dataset $DATASET --method Src --model $MODEL --epoch $EPOCH --update_every_x ${update_every_x} --memory_size ${memory_size} --seed $SEED \
-          #   --log_prefix ${LOG_PREFIX}_${SEED} \
-          #   ${validation} \
-          #   2>&1 | tee raw_logs/${DATASET}_${LOG_PREFIX}_${SEED}_job${i}.txt &
+          ### Train with BN
+          python main.py --gpu_idx ${GPUS[i % ${NUM_GPUS}]} --dataset $DATASET --method Src --model $MODEL --epoch $EPOCH --update_every_x ${update_every_x} --memory_size ${memory_size} --seed $SEED \
+            --log_prefix ${LOG_PREFIX}_${SEED} \
+            2>&1 | tee raw_logs/${DATASET}_${LOG_PREFIX}_${SEED}_job${i}.txt &
 
-          # i=$((i + 1))
-          # wait_n
+          i=$((i + 1))
+          wait_n
 
-          ### Train with IABN, no fuse
+          ## Train with IABN, no fuse
           for iabn_k in 4; do
             python main.py --gpu_idx ${GPUS[i % ${NUM_GPUS}]} --dataset $DATASET --method Src \
               --model $MODEL --epoch $EPOCH --update_every_x ${update_every_x} \

@@ -9,50 +9,16 @@ from utils.loss_functions import *
 device = torch.device(
     "cuda:{:d}".format(conf.args.gpu_idx) if torch.cuda.is_available() else "cpu"
 )
-from utils.iabn import *
 
-
-class NOTE(Learner_base):
+class CONTEDA(Learner_base):
     def __init__(self, *args, **kwargs):
-        super(NOTE, self).__init__(*args, **kwargs)
-
-        # turn on grad for BN params only
-
-        for param in self.net.parameters():  # initially turn off requires_grad for all
-            param.requires_grad = False
+        super(CONTEDA, self).__init__(*args, **kwargs)
+        self.fix_net_train_BN()
         for module in self.net.modules():
-
-            if isinstance(module, nn.BatchNorm1d) or isinstance(module, nn.BatchNorm2d):
-                # https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
-
-                if conf.args.use_learned_stats:
-                    module.track_running_stats = True
-                    module.momentum = conf.args.bn_momentum
-                else:
-                    # With below, this module always uses the test batch statistics (no momentum)
-                    module.track_running_stats = False
-                    module.running_mean = None
-                    module.running_var = None
-
+            if isinstance(module, nn.Linear):
+                # train the FC layer
                 module.weight.requires_grad_(True)
                 module.bias.requires_grad_(True)
-
-            elif isinstance(module, nn.InstanceNorm1d) or isinstance(
-                module, nn.InstanceNorm2d
-            ):  # ablation study
-                module.weight.requires_grad_(True)
-                module.bias.requires_grad_(True)
-
-            if conf.args.iabn:
-                if isinstance(module, InstanceAwareBatchNorm2d) or isinstance(
-                    module, InstanceAwareBatchNorm1d
-                ):
-                    for param in module.parameters():
-                        param.requires_grad = True
-
-        self.fifo = memory.FIFO(
-            capacity=conf.args.update_every_x
-        )  # required for evaluation
 
     def train_online(self, train_set, current_num_sample):
         """
@@ -76,10 +42,13 @@ class NOTE(Learner_base):
             cls[current_num_sample - 1],
             dls[current_num_sample - 1],
         )
-        self.fifo.add_instance(current_sample)  # for batch-based inferece
+
+        self.mems = []
+
+        if
+            memory.FIFO(capacity=conf.args.memory_size)
 
         with torch.no_grad():
-
             self.net.eval()
 
             if conf.args.memory_type in ["FIFO", "Reservoir"]:
@@ -96,7 +65,6 @@ class NOTE(Learner_base):
                 pseudo_cls = logit.max(1, keepdim=False)[1][0]
                 self.mem.add_instance([f, pseudo_cls, d, c, 0])
 
-        # if apply batch-free inference, we dont need self.fifo
         if conf.args.use_learned_stats:  # batch-free inference
             self.evaluation_online(
                 current_num_sample,
@@ -119,11 +87,6 @@ class NOTE(Learner_base):
                 )
                 return SKIPPED
 
-        if not conf.args.use_learned_stats:  # batch-based inference
-            self.evaluation_online(current_num_sample, self.fifo.get_memory(), train_set)
-
-        if conf.args.no_adapt:  # for ablation
-            return TRAINED
         # setup models
         self.net.train()
 

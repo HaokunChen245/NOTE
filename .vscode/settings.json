@@ -1,6 +1,6 @@
 {
-    "editor.formatOnPaste": true,
-    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnSave": false,
     "python.formatting.provider": "black",
     "python.linting.flake8Enabled": false,
     "python.linting.pylintEnabled": true,

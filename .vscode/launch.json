@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "conteda",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--gpu_idx", "0",
+                "--dataset", "cifar100",
+                "--method", "NOTE",
+                "--model", "resnet18",
+                "--epoch", "1",
+                "--load_checkpoint_path", "log/cifar100/Src/pretraining_0/cp/cp_last.pth.tar",
+                "--seed", "0",
+                "--remove_cp",
+                "--online",
+                "--update_every_x", "64",
+                "--memory_size", "64",
+                "--num_splits", "10",
+                "--log_prefix", "methods_0_10",
+                "--use_learned_stats",
+            ],
+            "justMyCode": true
+        }
+    ]
+}

@@ -62,7 +62,6 @@ def main():
         model = resnet18()
 
     # import modules after setting the seed
-    from data_loader import data_loader as data_loader
     from learner.conteda_learner import Learner_base
     from learner.bn_stats import BN_Stats
     from learner.onda import ONDA
@@ -75,7 +74,6 @@ def main():
     result_path, checkpoint_path, log_path = get_path()
 
     ########## Dataset loading ############################
-
     if conf.args.method == "Src":
         learner_method = Learner_base
     elif conf.args.method == "BN_Stats":

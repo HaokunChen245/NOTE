@@ -116,6 +116,27 @@ class Learner_base:
 
         self.json = {}
 
+    def fix_net_train_BN(self, ):
+
+        # turn on grad for BN params only
+        for param in self.net.parameters():  # initially turn off requires_grad for all
+            param.requires_grad = False
+        for module in self.net.modules():
+            if isinstance(module, nn.BatchNorm1d) or isinstance(module, nn.BatchNorm2d):
+                # https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
+
+                if conf.args.use_learned_stats:
+                    module.track_running_stats = True
+                    module.momentum = conf.args.bn_momentum
+                else:
+                    # With below, this module always uses the test batch statistics (no momentum)
+                    module.track_running_stats = False
+                    module.running_mean = None
+                    module.running_var = None
+
+                module.weight.requires_grad_(True)
+                module.bias.requires_grad_(True)
+
     def evaluation_online(self, epoch, current_samples, set):
         # Evaluate with online samples that come one by one while keeping the order.
 

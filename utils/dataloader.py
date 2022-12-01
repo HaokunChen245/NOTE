@@ -69,19 +69,23 @@ def target_data_processing(dataloader):
 def split_and_rearrange_datasets(datasets, num_splits):
     sets = []
     out = []
-    for set in datasets:
+    for dset in datasets:
         if num_splits > 1:
-            len_set = len(set)
+            len_set = len(dset)
             splits = [len_set // num_splits] * num_splits
             splits[-1] += len_set % num_splits
-            sets_list = torch.utils.data.random_split(set, splits)
+            sets_list = torch.utils.data.random_split(dset, splits)
             sets.append(sets_list)
         else:
-            sets.append(set)
-    for i in range(num_splits):
-        for set in sets:
-            out.append(set)
-    return out
+            sets.append(dset)
+
+    if num_splits > 1:
+        for i in range(num_splits):
+            for sets_list in sets:
+                out.append(sets_list[i])
+        return out
+    else:
+        return sets
 
 
 def domain_data_loader(
